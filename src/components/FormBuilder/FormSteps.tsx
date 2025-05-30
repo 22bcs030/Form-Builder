@@ -67,20 +67,30 @@ const FormSteps: React.FC<FormStepsProps> = ({ formId, currentStepIndex, onSelec
                 )}
               />
               {form.steps.length > 1 && (
-                <button
+                <span
                   onClick={(e) => {
                     e.stopPropagation();
                     handleDeleteStep(step.id);
                   }}
-                  className="ml-1 rounded-full p-1 text-muted-foreground hover:text-destructive"
+                  className="ml-1 rounded-full p-1 text-muted-foreground hover:text-destructive cursor-pointer"
                   aria-label="Delete step"
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleDeleteStep(step.id);
+                    }
+                  }}
                 >
                   <X size={14} />
-                </button>
+                </span>
               )}
             </button>
           </div>
         ))}
+        
         <button
           onClick={handleAddStep}
           className="inline-flex items-center rounded-md bg-muted px-3 py-1 text-sm text-muted-foreground hover:text-foreground"
@@ -90,6 +100,29 @@ const FormSteps: React.FC<FormStepsProps> = ({ formId, currentStepIndex, onSelec
           Add Step
         </button>
       </div>
+      
+      {form.steps.length > 1 && (
+        <div className="mt-2">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span>Step {currentStepIndex + 1} of {form.steps.length}</span>
+            <span>{Math.round(((currentStepIndex + 1) / form.steps.length) * 100)}%</span>
+          </div>
+          <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+            <div
+              className="h-full bg-primary transition-all"
+              style={{
+                width: `${((currentStepIndex + 1) / form.steps.length) * 100}%`,
+              }}
+            />
+          </div>
+          <div className="mt-1 text-xs text-muted-foreground">
+            <span>Progress indicator will be {form.settings.showProgressBar ? 'shown' : 'hidden'} to users</span>
+            {!form.settings.showProgressBar && (
+              <span className="ml-1 text-primary">(Enable in form settings)</span>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -79,9 +79,6 @@ const FormCanvas: React.FC<FormCanvasProps> = ({
       
       // Add the field at the found position
       addField(currentStep.id, fieldType);
-      
-      // Prevent further processing
-      event.preventDefault();
     }
   };
   

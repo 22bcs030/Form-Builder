@@ -11,6 +11,7 @@ import FormCanvas from '../components/FormBuilder/FormCanvas';
 import FieldsPanel from '../components/FormBuilder/FieldsPanel';
 import PropertiesPanel from '../components/FormBuilder/PropertiesPanel';
 import SettingsPanel from '../components/FormBuilder/SettingsPanel';
+import TemplatesPanel from '../components/FormBuilder/TemplatesPanel';
 
 const FormBuilder: React.FC = () => {
   const { formId } = useParams<{ formId?: string }>();
@@ -21,10 +22,12 @@ const FormBuilder: React.FC = () => {
   const createForm = useFormStore(state => state.createForm);
   const setCurrentForm = useFormStore(state => state.setCurrentForm);
   const addField = useFormStore(state => state.addField);
+  const saveToHistory = useFormStore(state => state.saveToHistory);
   
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [showTemplates, setShowTemplates] = useState(false);
   
   const form = useFormStore(state => state.currentForm);
   
@@ -40,6 +43,10 @@ const FormBuilder: React.FC = () => {
     const foundForm = getForm(formId);
     if (foundForm) {
       setCurrentForm(foundForm);
+      // Initialize history with current form state
+      setTimeout(() => {
+        saveToHistory();
+      }, 0);
     } else if (forms.length > 0) {
       // If formId doesn't exist but we have other forms, redirect to the first one
       navigate(`/builder/${forms[0].id}`, { replace: true });
@@ -113,7 +120,8 @@ const FormBuilder: React.FC = () => {
     <div className="flex h-full flex-col">
       <FormBuilderHeader 
         formId={formId} 
-        onOpenSettings={() => setShowSettings(true)} 
+        onOpenSettings={() => setShowSettings(true)}
+        onOpenTemplates={() => setShowTemplates(true)}
       />
       
       <FormSteps 
@@ -155,6 +163,13 @@ const FormBuilder: React.FC = () => {
         <SettingsPanel
           formId={formId}
           onClose={() => setShowSettings(false)}
+        />
+      )}
+      
+      {showTemplates && (
+        <TemplatesPanel
+          formId={formId}
+          onClose={() => setShowTemplates(false)}
         />
       )}
     </div>

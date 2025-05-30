@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { nanoid } from 'nanoid';
-import { Form, FormField, FormStep, FormSubmission, FieldType } from '../types/form';
+import { Form, FormField, FormStep, FormSubmission, FieldType, FormTemplate } from '../types/form';
 
 interface FormState {
   forms: Form[];
@@ -9,6 +9,7 @@ interface FormState {
   formHistory: Form[];
   historyIndex: number;
   submissions: FormSubmission[];
+  templates: FormTemplate[];
   
   // Form CRUD
   createForm: () => void;
@@ -34,12 +35,134 @@ interface FormState {
   saveToHistory: () => void;
   undo: () => void;
   redo: () => void;
+  canUndo: () => boolean;
+  canRedo: () => boolean;
+  
+  // Templates
+  saveAsTemplate: (name: string, description: string) => void;
+  loadTemplate: (templateId: string) => Form | undefined;
+  deleteTemplate: (templateId: string) => void;
   
   // Submissions
   addSubmission: (submission: Omit<FormSubmission, 'id' | 'submittedAt'>) => void;
   getSubmissionsForForm: (formId: string) => FormSubmission[];
   clearSubmissions: (formId: string) => void;
 }
+
+// Predefined templates
+const contactFormTemplate: FormTemplate = {
+  id: 'contact-form',
+  name: 'Contact Us Form',
+  description: 'A simple contact form with name, email, and message fields',
+  form: {
+    title: 'Contact Us',
+    description: 'We\'d love to hear from you! Fill out the form below to get in touch.',
+    steps: [
+      {
+        id: 'step-1',
+        title: 'Contact Information',
+        fields: [
+          {
+            id: 'name',
+            type: FieldType.TEXT,
+            label: 'Name',
+            placeholder: 'Enter your full name',
+            required: true,
+          },
+          {
+            id: 'email',
+            type: FieldType.EMAIL,
+            label: 'Email',
+            placeholder: 'Enter your email address',
+            required: true,
+          },
+          {
+            id: 'phone',
+            type: FieldType.PHONE,
+            label: 'Phone Number',
+            placeholder: 'Enter your phone number',
+            required: false,
+          },
+          {
+            id: 'message',
+            type: FieldType.TEXTAREA,
+            label: 'Message',
+            placeholder: 'How can we help you?',
+            required: true,
+          }
+        ],
+      }
+    ],
+    settings: {
+      showProgressBar: false,
+      allowSaveAndContinue: false,
+      successMessage: 'Thank you for your message! We\'ll get back to you soon.',
+    }
+  }
+};
+
+const surveyFormTemplate: FormTemplate = {
+  id: 'survey-form',
+  name: 'Customer Feedback Survey',
+  description: 'A multi-step survey to collect customer feedback',
+  form: {
+    title: 'Customer Feedback Survey',
+    description: 'Help us improve our services by sharing your experience.',
+    steps: [
+      {
+        id: 'step-1',
+        title: 'About You',
+        fields: [
+          {
+            id: 'name',
+            type: FieldType.TEXT,
+            label: 'Name',
+            placeholder: 'Enter your name',
+            required: false,
+          },
+          {
+            id: 'email',
+            type: FieldType.EMAIL,
+            label: 'Email',
+            placeholder: 'Enter your email address',
+            required: true,
+          }
+        ],
+      },
+      {
+        id: 'step-2',
+        title: 'Your Experience',
+        fields: [
+          {
+            id: 'rating',
+            type: FieldType.SELECT,
+            label: 'How would you rate your overall experience?',
+            required: true,
+            options: [
+              { label: 'Excellent', value: 'excellent' },
+              { label: 'Good', value: 'good' },
+              { label: 'Average', value: 'average' },
+              { label: 'Poor', value: 'poor' },
+              { label: 'Very Poor', value: 'very-poor' },
+            ],
+          },
+          {
+            id: 'feedback',
+            type: FieldType.TEXTAREA,
+            label: 'What could we do to improve?',
+            placeholder: 'Share your thoughts...',
+            required: false,
+          }
+        ],
+      }
+    ],
+    settings: {
+      showProgressBar: true,
+      allowSaveAndContinue: true,
+      successMessage: 'Thank you for your feedback! Your input is valuable to us.',
+    }
+  }
+};
 
 export const useFormStore = create<FormState>()(
   persist(
@@ -49,6 +172,7 @@ export const useFormStore = create<FormState>()(
       formHistory: [],
       historyIndex: -1,
       submissions: [],
+      templates: [contactFormTemplate, surveyFormTemplate],
       
       createForm: () => {
         const newForm: Form = {
@@ -370,27 +494,49 @@ export const useFormStore = create<FormState>()(
         set(state => {
           if (!state.currentForm) return state;
           
+          // Create a deep copy of the current form to avoid reference issues
+          const currentFormCopy = JSON.parse(JSON.stringify(state.currentForm));
+          
           // Remove future history if we're not at the end
           const newHistory = state.formHistory.slice(0, state.historyIndex + 1);
-          newHistory.push({ ...state.currentForm });
+          
+          // Only add to history if there are actual changes
+          const lastHistoryItem = newHistory.length > 0 ? newHistory[newHistory.length - 1] : null;
+          if (lastHistoryItem && JSON.stringify(lastHistoryItem) === JSON.stringify(currentFormCopy)) {
+            return state; // No changes, don't add to history
+          }
+          
+          newHistory.push(currentFormCopy);
+          
+          // Limit history size to prevent memory issues
+          const maxHistorySize = 50;
+          const limitedHistory = newHistory.length > maxHistorySize 
+            ? newHistory.slice(newHistory.length - maxHistorySize) 
+            : newHistory;
+          
+          const newIndex = limitedHistory.length - 1;
           
           return {
-            formHistory: newHistory,
-            historyIndex: newHistory.length - 1,
+            formHistory: limitedHistory,
+            historyIndex: newIndex,
           };
         });
       },
       
       undo: () => {
         set(state => {
-          if (state.historyIndex <= 0 || state.formHistory.length <= 1) return state;
+          if (!state.canUndo() || !state.currentForm) return state;
           
           const newIndex = state.historyIndex - 1;
-          const previousForm = state.formHistory[newIndex];
+          if (newIndex < 0 || newIndex >= state.formHistory.length) return state;
+          
+          const previousForm = JSON.parse(JSON.stringify(state.formHistory[newIndex]));
+          
+          if (!previousForm || !previousForm.id) return state;
           
           return {
             historyIndex: newIndex,
-            currentForm: { ...previousForm },
+            currentForm: previousForm,
             forms: state.forms.map(form => 
               form.id === previousForm.id ? previousForm : form
             ),
@@ -400,19 +546,81 @@ export const useFormStore = create<FormState>()(
       
       redo: () => {
         set(state => {
-          if (state.historyIndex >= state.formHistory.length - 1) return state;
+          if (!state.canRedo() || !state.currentForm) return state;
           
           const newIndex = state.historyIndex + 1;
-          const nextForm = state.formHistory[newIndex];
+          if (newIndex < 0 || newIndex >= state.formHistory.length) return state;
+          
+          const nextForm = JSON.parse(JSON.stringify(state.formHistory[newIndex]));
+          
+          if (!nextForm || !nextForm.id) return state;
           
           return {
             historyIndex: newIndex,
-            currentForm: { ...nextForm },
+            currentForm: nextForm,
             forms: state.forms.map(form => 
               form.id === nextForm.id ? nextForm : form
             ),
           };
         });
+      },
+      
+      canUndo: () => {
+        const { historyIndex, formHistory } = get();
+        return historyIndex > 0 && formHistory.length > 1;
+      },
+      
+      canRedo: () => {
+        const { historyIndex, formHistory } = get();
+        return historyIndex < formHistory.length - 1 && formHistory.length > 1;
+      },
+      
+      // Template methods
+      saveAsTemplate: (name, description) => {
+        const { currentForm } = get();
+        if (!currentForm) return;
+        
+        const { id, createdAt, updatedAt, isPublished, ...formData } = currentForm;
+        
+        const newTemplate: FormTemplate = {
+          id: nanoid(),
+          name,
+          description,
+          form: formData as Omit<Form, 'id' | 'createdAt' | 'updatedAt' | 'isPublished'>
+        };
+        
+        set(state => ({
+          templates: [...state.templates, newTemplate]
+        }));
+      },
+      
+      loadTemplate: (templateId) => {
+        const { templates } = get();
+        const template = templates.find(t => t.id === templateId);
+        if (!template) return;
+        
+        const newForm: Form = {
+          id: nanoid(),
+          ...template.form,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          isPublished: false,
+        };
+        
+        set(state => ({
+          forms: [...state.forms, newForm],
+          currentForm: newForm,
+          formHistory: [newForm],
+          historyIndex: 0,
+        }));
+        
+        return newForm;
+      },
+      
+      deleteTemplate: (templateId) => {
+        set(state => ({
+          templates: state.templates.filter(template => template.id !== templateId)
+        }));
       },
       
       addSubmission: (submission) => {

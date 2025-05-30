@@ -1,17 +1,21 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus, File, Copy, Eye, FileText, Trash, Filter, Calendar } from 'lucide-react';
+import { Plus, File, Copy, Eye, FileText, Trash, Filter, Calendar, MessageSquare } from 'lucide-react';
 import { useFormStore } from '../stores/formStore';
 import { cn } from '../utils/cn';
+import TemplateCard from '../components/Dashboard/TemplateCard';
+import Button from '../components/ui/Button';
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const forms = useFormStore(state => state.forms);
+  const templates = useFormStore(state => state.templates);
   const createForm = useFormStore(state => state.createForm);
   const deleteForm = useFormStore(state => state.deleteForm);
   
   const [filter, setFilter] = useState<'all' | 'published' | 'drafts'>('all');
   const [sortBy, setSortBy] = useState<'updated' | 'created' | 'name'>('updated');
+  const [showTemplates, setShowTemplates] = useState(false);
   
   const filteredForms = forms.filter(form => {
     if (filter === 'all') return true;
@@ -60,16 +64,49 @@ const Dashboard: React.FC = () => {
   
   return (
     <div className="container mx-auto">
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-2xl font-bold">My Forms</h1>
-        <button
-          onClick={handleCreateForm}
-          className="btn-primary btn-default"
-        >
-          <Plus size={16} className="mr-2" />
-          Create Form
-        </button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="default"
+            onClick={() => setShowTemplates(!showTemplates)}
+            icon={<FileText size={16} />}
+          >
+            Templates
+          </Button>
+          <Button
+            variant="primary"
+            size="default"
+            onClick={handleCreateForm}
+            icon={<Plus size={16} />}
+          >
+            Create Form
+          </Button>
+        </div>
       </div>
+      
+      {showTemplates && (
+        <div className="mb-8">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-xl font-semibold">Templates</h2>
+            <button
+              onClick={() => setShowTemplates(false)}
+              className="text-sm text-muted-foreground hover:text-foreground"
+            >
+              Hide Templates
+            </button>
+          </div>
+          
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {templates.map(template => (
+              <TemplateCard key={template.id} template={template} />
+            ))}
+          </div>
+          
+          <div className="mt-6 border-t border-border pt-6"></div>
+        </div>
+      )}
       
       {forms.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border p-12 text-center">
@@ -80,17 +117,28 @@ const Dashboard: React.FC = () => {
           <p className="mb-4 max-w-md text-muted-foreground">
             Get started by creating a new form to collect information, feedback, or responses from your audience.
           </p>
-          <button
-            onClick={handleCreateForm}
-            className="btn-primary btn-default"
-          >
-            <Plus size={16} className="mr-2" />
-            Create Form
-          </button>
+          <div className="flex gap-4">
+            <Button
+              variant="outline"
+              size="default"
+              onClick={() => setShowTemplates(true)}
+              icon={<FileText size={16} />}
+            >
+              Use Template
+            </Button>
+            <Button
+              variant="primary"
+              size="default"
+              onClick={handleCreateForm}
+              icon={<Plus size={16} />}
+            >
+              Create Form
+            </Button>
+          </div>
         </div>
       ) : (
         <>
-          <div className="mb-6 flex flex-wrap items-center gap-4">
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center rounded-md border border-border bg-card p-1">
               <button
                 onClick={() => setFilter('all')}
@@ -173,37 +221,48 @@ const Dashboard: React.FC = () => {
                 
                 <div className="mt-4 flex justify-between">
                   <div className="flex gap-2">
-                    <button
+                    <Button
+                      variant="ghost"
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
                         navigate(`/preview/${form.id}`);
                       }}
-                      className="btn-ghost rounded-md p-2 hover:bg-muted"
+                      className="p-2 hover:bg-muted"
                       aria-label="Preview form"
-                    >
-                      <Eye size={16} />
-                    </button>
-                    <button
+                      icon={<Eye size={16} />}
+                    />
+                    <Button
+                      variant="ghost"
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
                         handleDuplicateForm(form.id);
                       }}
-                      className="btn-ghost rounded-md p-2 hover:bg-muted"
+                      className="p-2 hover:bg-muted"
                       aria-label="Duplicate form"
-                    >
-                      <Copy size={16} />
-                    </button>
+                      icon={<Copy size={16} />}
+                    />
+                    <Button
+                      variant="ghost"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        navigate(`/submissions/${form.id}`);
+                      }}
+                      className="p-2 hover:bg-muted"
+                      aria-label="View responses"
+                      icon={<MessageSquare size={16} />}
+                    />
                   </div>
                   
-                  <button
+                  <Button
+                    variant="ghost"
                     onClick={(e) => handleDeleteForm(form.id, e)}
-                    className="btn-ghost rounded-md p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                    className="p-2 text-destructive hover:bg-destructive/10"
                     aria-label="Delete form"
-                  >
-                    <Trash size={16} />
-                  </button>
+                    icon={<Trash size={16} />}
+                  />
                 </div>
               </Link>
             ))}

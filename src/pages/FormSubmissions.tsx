@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Download, Trash, AlertCircle, Search, Filter } from 'lucide-react';
+import { ChevronLeft, Download, Trash, AlertCircle, Search, Filter, MessageSquare } from 'lucide-react';
 import { useFormStore } from '../stores/formStore';
 import { FormSubmission } from '../types/form';
+import Button from '../components/ui/Button';
 
 const FormSubmissions: React.FC = () => {
   const { formId } = useParams<{ formId: string }>();
@@ -13,9 +14,21 @@ const FormSubmissions: React.FC = () => {
   
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<'newest' | 'oldest'>('newest');
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   
   const form = formId ? getForm(formId) : null;
   const allSubmissions = formId ? getSubmissionsForForm(formId) : [];
+  
+  // Get all unique field names across all submissions
+  const allFieldNames = React.useMemo(() => {
+    const fieldSet = new Set<string>();
+    allSubmissions.forEach(submission => {
+      Object.keys(submission.data).forEach(key => {
+        fieldSet.add(key);
+      });
+    });
+    return Array.from(fieldSet);
+  }, [allSubmissions]);
   
   const filteredSubmissions = allSubmissions.filter(submission => {
     if (!searchTerm) return true;
@@ -42,49 +55,58 @@ const FormSubmissions: React.FC = () => {
   const handleClearSubmissions = () => {
     if (formId && confirm('Are you sure you want to delete all submissions?')) {
       clearSubmissions(formId);
+      setRefreshTrigger(prev => prev + 1);
     }
   };
   
   const handleExportCsv = () => {
     if (!allSubmissions.length) return;
     
-    // Get all unique fields across all submissions
-    const allFields = new Set<string>();
-    allSubmissions.forEach(submission => {
-      Object.keys(submission.data).forEach(key => {
-        allFields.add(key);
+    try {
+      // Get all unique fields across all submissions
+      const allFields = new Set<string>();
+      allSubmissions.forEach(submission => {
+        Object.keys(submission.data).forEach(key => {
+          allFields.add(key);
+        });
       });
-    });
-    
-    const headers = ['Submission ID', 'Submitted At', ...Array.from(allFields)];
-    
-    // Create CSV content
-    let csvContent = headers.join(',') + '\n';
-    
-    allSubmissions.forEach(submission => {
-      const row = [
-        submission.id,
-        new Date(submission.submittedAt).toLocaleString(),
-        ...Array.from(allFields).map(field => {
-          const value = submission.data[field];
-          // Handle commas in values by quoting
-          return value !== undefined ? `"${String(value).replace(/"/g, '""')}"` : '';
-        }),
-      ];
       
-      csvContent += row.join(',') + '\n';
-    });
-    
-    // Create and download the file
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `${form?.title || 'form'}-submissions.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+      const headers = ['Submission ID', 'Submitted At', ...Array.from(allFields)];
+      
+      // Create CSV content
+      let csvContent = headers.join(',') + '\n';
+      
+      allSubmissions.forEach(submission => {
+        const row = [
+          submission.id,
+          new Date(submission.submittedAt).toLocaleString(),
+          ...Array.from(allFields).map(field => {
+            const value = submission.data[field];
+            // Handle commas and quotes in values by quoting and escaping
+            if (value === undefined || value === null) return '';
+            const stringValue = typeof value === 'object' ? JSON.stringify(value) : String(value);
+            return `"${stringValue.replace(/"/g, '""')}"`;
+          }),
+        ];
+        
+        csvContent += row.join(',') + '\n';
+      });
+      
+      // Create and download the file
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `${form?.title || 'form'}-submissions.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error exporting CSV:', error);
+      alert('Failed to export CSV. Please try again.');
+    }
   };
   
   const formatDate = (dateString: string) => {
@@ -99,12 +121,14 @@ const FormSubmissions: React.FC = () => {
           <p className="mt-2 text-muted-foreground">
             The form you're looking for doesn't exist or has been deleted.
           </p>
-          <button
+          <Button
+            variant="primary"
+            size="default"
             onClick={() => navigate('/')}
-            className="btn-primary btn-default mt-4"
+            className="mt-4"
           >
             Back to Dashboard
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -114,37 +138,48 @@ const FormSubmissions: React.FC = () => {
     <div className="container mx-auto py-6">
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center">
-          <button
+          <Button
+            variant="ghost"
             onClick={handleBackToEditor}
-            className="btn-ghost rounded-md p-2"
             aria-label="Back to editor"
-          >
-            <ChevronLeft size={18} />
-          </button>
-          <h1 className="ml-2 text-xl font-bold">
-            Submissions: {form.title}
+            icon={<ChevronLeft size={18} />}
+          />
+          <h1 className="ml-2 text-xl font-bold flex items-center">
+            <MessageSquare size={20} className="mr-2 text-primary" />
+            Form Responses: {form.title}
           </h1>
         </div>
         
         <div className="flex items-center gap-2">
-          <button
+          <Button
+            variant="outline"
+            size="sm"
             onClick={handleExportCsv}
-            className="btn-outline btn-sm"
             disabled={!allSubmissions.length}
+            icon={<Download size={16} />}
           >
-            <Download size={16} className="mr-1" />
             Export CSV
-          </button>
+          </Button>
           
-          <button
+          <Button
+            variant="outline"
+            size="sm"
             onClick={handleClearSubmissions}
-            className="btn-outline btn-sm text-destructive hover:bg-destructive/10 hover:text-destructive"
             disabled={!allSubmissions.length}
+            icon={<Trash size={16} />}
+            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
           >
-            <Trash size={16} className="mr-1" />
             Clear All
-          </button>
+          </Button>
         </div>
+      </div>
+      
+      <div className="mb-4 p-3 bg-primary/5 border border-primary/10 rounded-md">
+        <h2 className="text-sm font-medium">About Form Responses</h2>
+        <p className="text-sm text-muted-foreground mt-1">
+          This page shows all submissions for your form. When users complete and submit your form, their responses will appear here.
+          You can search, filter, and export the data as needed.
+        </p>
       </div>
       
       {allSubmissions.length === 0 ? (
@@ -195,8 +230,8 @@ const FormSubmissions: React.FC = () => {
                     <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
                       Submitted At
                     </th>
-                    {/* Get field names from the first submission */}
-                    {Object.keys(sortedSubmissions[0]?.data || {}).map((field) => (
+                    {/* Display all field names as columns */}
+                    {allFieldNames.map((field) => (
                       <th
                         key={field}
                         className="px-4 py-3 text-left text-sm font-medium text-muted-foreground"
@@ -218,18 +253,22 @@ const FormSubmissions: React.FC = () => {
                       <td className="whitespace-nowrap px-4 py-3 text-sm">
                         {formatDate(submission.submittedAt)}
                       </td>
-                      {Object.entries(submission.data).map(([key, value]) => (
-                        <td
-                          key={`${submission.id}-${key}`}
-                          className="px-4 py-3 text-sm"
-                        >
-                          {typeof value === 'boolean'
-                            ? value
-                              ? '✓'
-                              : '✗'
-                            : String(value)}
-                        </td>
-                      ))}
+                      {/* Display values for each field, or empty cell if no value */}
+                      {allFieldNames.map((field) => {
+                        const value = submission.data[field];
+                        return (
+                          <td
+                            key={`${submission.id}-${field}`}
+                            className="px-4 py-3 text-sm"
+                          >
+                            {value === undefined ? '' : 
+                              typeof value === 'boolean'
+                                ? value ? '✓' : '✗'
+                                : String(value)
+                            }
+                          </td>
+                        );
+                      })}
                     </tr>
                   ))}
                 </tbody>

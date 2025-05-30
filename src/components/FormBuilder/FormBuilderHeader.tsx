@@ -1,14 +1,21 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Settings, Eye, Save, Undo, Redo, Share, Trash } from 'lucide-react';
+import { Settings, Eye, Share, Trash, Undo, Redo, FileText, MessageSquare } from 'lucide-react';
 import { useFormStore } from '../../stores/formStore';
+import { cn } from '../../utils/cn';
+import Button from '../ui/Button';
 
 type FormBuilderHeaderProps = {
   formId: string;
   onOpenSettings: () => void;
+  onOpenTemplates: () => void;
 };
 
-const FormBuilderHeader: React.FC<FormBuilderHeaderProps> = ({ formId, onOpenSettings }) => {
+const FormBuilderHeader: React.FC<FormBuilderHeaderProps> = ({ 
+  formId, 
+  onOpenSettings,
+  onOpenTemplates
+}) => {
   const navigate = useNavigate();
   const form = useFormStore(state => state.currentForm);
   const updateForm = useFormStore(state => state.updateForm);
@@ -16,8 +23,22 @@ const FormBuilderHeader: React.FC<FormBuilderHeaderProps> = ({ formId, onOpenSet
   const publishForm = useFormStore(state => state.publishForm);
   const undo = useFormStore(state => state.undo);
   const redo = useFormStore(state => state.redo);
+  const canUndo = useFormStore(state => state.canUndo);
+  const canRedo = useFormStore(state => state.canRedo);
+  const historyIndex = useFormStore(state => state.historyIndex);
+  const formHistory = useFormStore(state => state.formHistory);
+  
+  // Track history state to force re-renders
+  const [undoState, setUndoState] = useState(false);
+  const [redoState, setRedoState] = useState(false);
   
   const [formTitle, setFormTitle] = React.useState(form?.title || 'Untitled Form');
+  
+  // Update button states when history changes
+  useEffect(() => {
+    setUndoState(canUndo());
+    setRedoState(canRedo());
+  }, [historyIndex, formHistory, canUndo, canRedo]);
   
   React.useEffect(() => {
     if (form) {
@@ -58,6 +79,28 @@ const FormBuilderHeader: React.FC<FormBuilderHeaderProps> = ({ formId, onOpenSet
     }
   };
   
+  const handleUndo = () => {
+    if (canUndo()) {
+      undo();
+      // Update states to force re-render
+      setUndoState(canUndo());
+      setRedoState(canRedo());
+    }
+  };
+  
+  const handleRedo = () => {
+    if (canRedo()) {
+      redo();
+      // Update states to force re-render
+      setUndoState(canUndo());
+      setRedoState(canRedo());
+    }
+  };
+  
+  const handleViewResponses = () => {
+    navigate(`/submissions/${formId}`);
+  };
+  
   return (
     <div className="border-b border-border bg-card px-4 py-3 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -74,55 +117,94 @@ const FormBuilderHeader: React.FC<FormBuilderHeaderProps> = ({ formId, onOpenSet
         </div>
         
         <div className="flex flex-wrap items-center gap-2">
-          <button
-            onClick={undo}
-            className="btn-ghost rounded-md p-2"
-            aria-label="Undo"
-          >
-            <Undo size={18} />
-          </button>
+          <div className="flex items-center border border-border rounded-md">
+            <Button
+              variant="ghost"
+              onClick={handleUndo}
+              disabled={!undoState}
+              className={cn(
+                "rounded-l-md p-2 border-r-0",
+                !undoState && "text-muted-foreground cursor-not-allowed"
+              )}
+              aria-label="Undo"
+              title="Undo"
+              icon={<Undo size={18} />}
+            />
+            
+            <div className="h-5 w-px bg-border"></div>
+            
+            <Button
+              variant="ghost"
+              onClick={handleRedo}
+              disabled={!redoState}
+              className={cn(
+                "rounded-r-md p-2 border-l-0",
+                !redoState && "text-muted-foreground cursor-not-allowed"
+              )}
+              aria-label="Redo"
+              title="Redo"
+              icon={<Redo size={18} />}
+            />
+          </div>
           
-          <button
-            onClick={redo}
-            className="btn-ghost rounded-md p-2"
-            aria-label="Redo"
-          >
-            <Redo size={18} />
-          </button>
+          <Button
+            variant="ghost"
+            onClick={onOpenTemplates}
+            aria-label="Templates"
+            title="Templates"
+            icon={<FileText size={18} />}
+          />
           
-          <button
+          <Button
+            variant="ghost"
             onClick={onOpenSettings}
-            className="btn-ghost rounded-md p-2"
             aria-label="Form settings"
-          >
-            <Settings size={18} />
-          </button>
+            title="Form settings"
+            icon={<Settings size={18} />}
+          />
           
-          <button
+          <Button
+            variant="outline"
+            size="sm"
             onClick={handlePreview}
-            className="btn-outline btn-sm hidden sm:flex"
             aria-label="Preview form"
+            className="hidden sm:flex"
+            icon={<Eye size={16} />}
           >
-            <Eye size={16} className="mr-1" />
             Preview
-          </button>
+          </Button>
           
-          <button
+          {form?.isPublished && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleViewResponses}
+              aria-label="View responses"
+              className="hidden sm:flex"
+              icon={<MessageSquare size={16} />}
+            >
+              Responses
+            </Button>
+          )}
+          
+          <Button
+            variant="primary"
+            size="sm"
             onClick={handlePublish}
-            className="btn-primary btn-sm"
             aria-label={form?.isPublished ? 'Unpublish form' : 'Publish form'}
+            icon={<Share size={16} />}
           >
-            <Share size={16} className="mr-1" />
             {form?.isPublished ? 'Unpublish' : 'Publish'}
-          </button>
+          </Button>
           
-          <button
+          <Button
+            variant="ghost"
             onClick={handleDelete}
-            className="btn-ghost text-destructive rounded-md p-2"
             aria-label="Delete form"
-          >
-            <Trash size={18} />
-          </button>
+            title="Delete form"
+            icon={<Trash size={18} />}
+            className="text-destructive hover:bg-destructive/10"
+          />
         </div>
       </div>
     </div>

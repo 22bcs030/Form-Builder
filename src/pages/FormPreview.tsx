@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Copy, Share } from 'lucide-react';
+import { ChevronLeft, Copy, Share, MessageSquare } from 'lucide-react';
 import { useFormStore } from '../stores/formStore';
 import DeviceFrame, { DeviceType } from '../components/FormPreview/DeviceFrame';
 import FormRenderer from '../components/FormPreview/FormRenderer';
+import Button from '../components/ui/Button';
 
 const FormPreview: React.FC = () => {
   const { formId } = useParams<{ formId: string }>();
@@ -43,6 +44,18 @@ const FormPreview: React.FC = () => {
     }
   };
   
+  const handleViewResponses = () => {
+    if (formId) {
+      navigate(`/submissions/${formId}`);
+    }
+  };
+  
+  const handleOpenForm = () => {
+    if (formId) {
+      navigate(`/form/${formId}`);
+    }
+  };
+  
   if (!form) {
     return (
       <div className="flex h-full items-center justify-center">
@@ -51,35 +64,54 @@ const FormPreview: React.FC = () => {
           <p className="mt-2 text-muted-foreground">
             The form you're looking for doesn't exist or has been deleted.
           </p>
-          <button
+          <Button
+            variant="primary"
+            size="default"
             onClick={() => navigate('/')}
-            className="btn-primary btn-default mt-4"
+            className="mt-4"
           >
             Back to Dashboard
-          </button>
+          </Button>
         </div>
       </div>
     );
   }
+  
+  const hasMultipleSteps = form.steps.length > 1;
   
   return (
     <div className="flex h-full flex-col">
       <div className="border-b border-border bg-card px-4 py-3 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center">
-            <button
+            <Button
+              variant="ghost"
               onClick={handleBackToEditor}
-              className="btn-ghost rounded-md p-2"
+              className="rounded-md p-2"
               aria-label="Back to editor"
-            >
-              <ChevronLeft size={18} />
-            </button>
+              icon={<ChevronLeft size={18} />}
+            />
             <h1 className="ml-2 text-lg font-medium">
               Preview: {form.title}
             </h1>
+            {hasMultipleSteps && (
+              <span className="ml-2 rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">
+                Multi-step form ({form.steps.length} steps)
+              </span>
+            )}
           </div>
           
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleViewResponses}
+              aria-label="View responses"
+              icon={<MessageSquare size={16} />}
+            >
+              Responses
+            </Button>
+            
             <div className="relative flex items-center rounded-md border border-border bg-background px-3 py-1">
               <input
                 type="text"
@@ -101,20 +133,33 @@ const FormPreview: React.FC = () => {
               )}
             </div>
             
-            <button
-              className="btn-primary btn-sm"
-              onClick={() => window.open(shareUrl, '_blank')}
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleOpenForm}
+              icon={<Share size={16} />}
             >
-              <Share size={16} className="mr-1" />
               Open
-            </button>
+            </Button>
           </div>
         </div>
       </div>
       
+      {hasMultipleSteps && (
+        <div className="bg-muted/30 px-4 py-2 text-sm">
+          <div className="flex items-center">
+            <span className="font-medium">Multi-step Form:</span>
+            <span className="ml-2">This form has {form.steps.length} steps with navigation and validation.</span>
+            <span className="ml-2 text-muted-foreground">
+              {form.settings.showProgressBar ? 'Progress indicator is enabled.' : 'Progress indicator is disabled.'}
+            </span>
+          </div>
+        </div>
+      )}
+      
       <div className="flex-1 overflow-hidden">
         <DeviceFrame device={device} onDeviceChange={handleDeviceChange}>
-          <FormRenderer form={form} />
+          <FormRenderer form={form} previewMode={true} />
         </DeviceFrame>
       </div>
     </div>

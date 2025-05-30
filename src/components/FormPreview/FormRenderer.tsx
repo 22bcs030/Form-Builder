@@ -1,19 +1,37 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Form, FormField, FormStep, ValidationRule } from '../../types/form';
 import { cn } from '../../utils/cn';
+import { useFormStore } from '../../stores/formStore';
+import { useParams } from 'react-router-dom';
+import Button from '../ui/Button';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
 
 interface FormRendererProps {
   form: Form;
   onSubmit?: (data: Record<string, any>) => void;
+  previewMode?: boolean;
 }
 
-const FormRenderer: React.FC<FormRendererProps> = ({ form, onSubmit }) => {
+const FormRenderer: React.FC<FormRendererProps> = ({ form, onSubmit, previewMode = false }) => {
+  const { formId } = useParams<{ formId: string }>();
+  const addSubmission = useFormStore(state => state.addSubmission);
+  
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitted, setIsSubmitted] = useState(false);
   
   const currentStep = form.steps[currentStepIndex];
+  
+  // Collect all field labels for better data display in submissions
+  const fieldLabels: Record<string, string> = {};
+  useEffect(() => {
+    form.steps.forEach(step => {
+      step.fields.forEach(field => {
+        fieldLabels[field.id] = field.label;
+      });
+    });
+  }, [form]);
   
   const validateField = (field: FormField, value: any): string | null => {
     if (!field.validation) return null;
@@ -116,9 +134,28 @@ const FormRenderer: React.FC<FormRendererProps> = ({ form, onSubmit }) => {
       if (currentStepIndex < form.steps.length - 1) {
         handleNext();
       } else {
-        if (onSubmit) {
-          onSubmit(formData);
+        // Prepare submission data with labels
+        const labeledData: Record<string, any> = {};
+        
+        // Process form data to use field labels as keys
+        Object.entries(formData).forEach(([fieldId, value]) => {
+          const label = fieldLabels[fieldId] || fieldId;
+          labeledData[label] = value;
+        });
+        
+        // Only submit to store if not in preview mode and no onSubmit callback is provided
+        if (form.id && !onSubmit && !previewMode) {
+          addSubmission({
+            formId: form.id,
+            data: labeledData,
+          });
         }
+        
+        // Call onSubmit callback if provided
+        if (onSubmit) {
+          onSubmit(labeledData);
+        }
+        
         setIsSubmitted(true);
       }
     }
@@ -128,7 +165,7 @@ const FormRenderer: React.FC<FormRendererProps> = ({ form, onSubmit }) => {
     return (
       <div className="flex flex-col items-center justify-center p-8 text-center">
         <div className="mb-4 rounded-full bg-success/10 p-4 text-success">
-          <svg width="24\" height="24\" viewBox="0 0 24 24\" fill="none\" stroke="currentColor\" strokeWidth="2\" strokeLinecap="round\" strokeLinejoin="round">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
             <polyline points="22 4 12 14.01 9 11.01"></polyline>
           </svg>
@@ -353,23 +390,28 @@ const FormRenderer: React.FC<FormRendererProps> = ({ form, onSubmit }) => {
         
         <div className="mt-8 flex justify-between">
           {currentStepIndex > 0 && (
-            <button
+            <Button
+              variant="outline"
+              size="default"
               type="button"
               onClick={handlePrev}
-              className="btn-outline btn-default"
+              icon={<ArrowLeft size={16} />}
             >
               Previous
-            </button>
+            </Button>
           )}
           
           <div className="flex-1" />
           
-          <button
+          <Button
+            variant="primary"
+            size="default"
             type="submit"
-            className="btn-primary btn-default"
+            icon={currentStepIndex < form.steps.length - 1 ? <ArrowRight size={16} /> : undefined}
+            iconPosition={currentStepIndex < form.steps.length - 1 ? "right" : "left"}
           >
             {currentStepIndex < form.steps.length - 1 ? 'Next' : 'Submit'}
-          </button>
+          </Button>
         </div>
       </form>
     </div>

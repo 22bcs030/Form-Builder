@@ -23,8 +23,9 @@ A powerful frontend system for building forms visually with real-time previews a
   
 - **Multi-Step Forms**
   - Create multi-page forms with step navigation
-  - Visual progress indicator
-  - Validation between steps
+  - Visual progress indicator for users
+  - Step-by-step validation
+  - Intuitive navigation between form steps
   
 - **Form Sharing**
   - Generate shareable links for forms
@@ -34,11 +35,18 @@ A powerful frontend system for building forms visually with real-time previews a
 ### Bonus Features
 - **Auto-save** to localStorage
 - **Response Management**
-  - View submitted responses for each form
+  - View and analyze submitted responses for each form
+  - Filter and search through responses
   - Export responses to CSV
+  - Clear responses when no longer needed
 - **Dark/Light Theme** support
 - **Form Templates**
-  - Save and load form templates
+  - Predefined templates (Contact Us, Customer Survey)
+  - Save custom templates
+  - Load templates to create new forms
+- **Undo/Redo Functionality**
+  - Visual undo/redo buttons with state indicators
+  - History tracking for all form changes
 
 ## 🛠️ Tech Stack
 
@@ -87,8 +95,21 @@ yarn dev
 1. Click on "Create Form" on the dashboard
 2. Drag fields from the left panel to the canvas
 3. Configure field properties in the right panel
-4. Add multiple steps if needed
+4. Add multiple steps if needed using the "Add Step" button
 5. Preview your form in different device sizes
+
+### Creating Multi-Step Forms
+1. In the form builder, click "Add Step" to create additional form steps
+2. Name each step appropriately
+3. Add fields to each step
+4. Configure the progress indicator in Form Settings
+5. Preview to test step navigation and validation
+
+### Using Templates
+1. Click on the "Templates" button in the form builder
+2. Choose from predefined templates or your saved templates
+3. Load a template to create a new form
+4. Save your current form as a template for future use
 
 ### Sharing Forms
 1. Click "Publish" to make your form public
@@ -96,9 +117,10 @@ yarn dev
 3. Recipients can fill and submit the form
 
 ### Managing Responses
-1. Navigate to the "Submissions" tab for a form
-2. View all responses
-3. Export responses to CSV if needed
+1. Click the "Responses" button in the form builder or dashboard
+2. View all submitted responses in a table format
+3. Search and filter responses as needed
+4. Export responses to CSV for further analysis
 
 ## 📱 Responsive Design
 
@@ -127,4 +149,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 - [DND Kit](https://dndkit.com/) for the drag and drop functionality
 - [Tailwind CSS](https://tailwindcss.com/) for the styling
-- [Lucide Icons](https://lucide.dev/) for the icons 
+- [Lucide Icons](https://lucide.dev/) for the icons

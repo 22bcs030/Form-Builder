@@ -4,6 +4,7 @@ import { useFormStore } from '../stores/formStore';
 import FormRenderer from '../components/FormPreview/FormRenderer';
 import { Moon, Sun } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
+import Button from '../components/ui/Button';
 
 const PublicForm: React.FC = () => {
   const { formId } = useParams<{ formId: string }>();
@@ -14,6 +15,7 @@ const PublicForm: React.FC = () => {
   const addSubmission = useFormStore(state => state.addSubmission);
   
   const form = formId ? getForm(formId) : null;
+  const [submitted, setSubmitted] = useState(false);
   
   if (!form || !formId) {
     return (
@@ -23,12 +25,14 @@ const PublicForm: React.FC = () => {
           <p className="mb-6 text-muted-foreground">
             The form you're looking for doesn't exist or is no longer available.
           </p>
-          <button
+          <Button
+            variant="primary"
+            size="default"
             onClick={() => navigate('/')}
-            className="btn-primary btn-default w-full"
+            className="w-full"
           >
             Go to Homepage
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -37,10 +41,20 @@ const PublicForm: React.FC = () => {
   const handleSubmit = (data: Record<string, any>) => {
     if (!formId) return;
     
-    addSubmission({
-      formId,
-      data,
-    });
+    try {
+      // Add submission to store
+      addSubmission({
+        formId,
+        data,
+      });
+      
+      setSubmitted(true);
+      
+      // Log submission for debugging
+      console.log('Form submitted successfully:', data);
+    } catch (error) {
+      console.error('Error submitting form:', error);
+    }
   };
   
   return (

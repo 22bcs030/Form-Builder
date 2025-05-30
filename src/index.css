@@ -102,15 +102,23 @@
   }
   
   .btn-sm {
-    @apply h-8 rounded-md px-3 py-1;
+    @apply h-9 min-h-[2.25rem] rounded-md px-3 py-1 text-sm whitespace-nowrap;
   }
   
   .btn-default {
-    @apply h-10 px-4 py-2;
+    @apply h-10 min-h-[2.5rem] px-4 py-2 whitespace-nowrap;
   }
   
   .btn-lg {
-    @apply h-12 rounded-md px-6 py-3;
+    @apply h-12 min-h-[3rem] rounded-md px-6 py-3 whitespace-nowrap;
+  }
+
+  /* Add icon spacing for buttons with icons */
+  .btn svg + span,
+  .btn span + svg,
+  .btn svg.mr-1,
+  .btn svg.mr-2 {
+    @apply ml-2;
   }
 
   .form-input {
