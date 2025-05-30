@@ -20,6 +20,7 @@ A powerful frontend system for building forms visually with real-time previews a
   - Instant preview of form changes
   - Validation behavior preview
   - Responsive design preview modes (Desktop, Tablet, Mobile)
+  - Preview mode that doesn't record submissions
   
 - **Multi-Step Forms**
   - Create multi-page forms with step navigation
@@ -31,6 +32,7 @@ A powerful frontend system for building forms visually with real-time previews a
   - Generate shareable links for forms
   - Public form filling view
   - View submitted responses
+  - Proper submission tracking
 
 ### Bonus Features
 - **Auto-save** to localStorage
@@ -47,15 +49,18 @@ A powerful frontend system for building forms visually with real-time previews a
 - **Undo/Redo Functionality**
   - Visual undo/redo buttons with state indicators
   - History tracking for all form changes
+  - Deep copying to avoid reference issues
 
 ## 🛠️ Tech Stack
 
 - **React** - UI library
+- **TypeScript** - Type safety
 - **Vite** - Build tool and development environment
 - **Zustand** - State management
 - **Tailwind CSS** - Styling
 - **DND Kit** - Drag and drop functionality
 - **React Router** - Routing
+- **Lucide Icons** - Modern icon set
 
 > **Note on Tech Stack**: While the assignment specified React Remix, this project uses Vite as the build tool. Vite provides excellent development experience with faster build times and hot module replacement, which is ideal for this type of application. All functional requirements have been implemented successfully with this stack.
 
@@ -70,7 +75,7 @@ A powerful frontend system for building forms visually with real-time previews a
 1. Clone the repository
 ```bash
 git clone <repository-url>
-cd form-builder
+cd project
 ```
 
 2. Install dependencies
@@ -88,6 +93,14 @@ yarn dev
 ```
 
 4. Open your browser and navigate to `http://localhost:5173`
+
+### Build for Production
+
+```bash
+npm run build
+# or
+yarn build
+```
 
 ## 📝 Usage
 
@@ -115,12 +128,14 @@ yarn dev
 1. Click "Publish" to make your form public
 2. Use the generated link to share your form
 3. Recipients can fill and submit the form
+4. View submissions in the Responses section
 
 ### Managing Responses
 1. Click the "Responses" button in the form builder or dashboard
 2. View all submitted responses in a table format
 3. Search and filter responses as needed
 4. Export responses to CSV for further analysis
+5. Clear all responses if needed
 
 ## 📱 Responsive Design
 
@@ -140,6 +155,7 @@ Forms and submissions are stored in the browser's localStorage. In a production 
 - Advanced form logic (conditional fields)
 - More field types
 - Custom themes
+- Form analytics
 
 ## 📄 License
 
@@ -150,3 +166,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - [DND Kit](https://dndkit.com/) for the drag and drop functionality
 - [Tailwind CSS](https://tailwindcss.com/) for the styling
 - [Lucide Icons](https://lucide.dev/) for the icons
+- [Zustand](https://github.com/pmndrs/zustand) for state management
