@@ -7,6 +7,6 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ['lucide-react'],
   },
-  // Uncomment and update the base path when deploying to GitHub Pages
-  base: '/project/',
+  // Base path for GitHub Pages deployment
+  base: '/Form-Builder/',
 }); 
